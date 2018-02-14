@@ -33,7 +33,7 @@ buf times 64 db 0
 simple_print:
     push ax						; Save registers
     push si
-    mov ah, 0x0E				; int 0x10, function 0x0E (print character)
+    mov ah, 0x0e				; int 0x10, function 0x0e (print character)
 .loop:
 	lodsb					; Load character from string
 	test al, al				; Is is the 0x00 terminator?
@@ -58,11 +58,11 @@ simple_input:
     int 0x16
     cmp al, 0x08
     je .backspace
-    cmp al, 0x0D
+    cmp al, 0x0d
     je .enter
     test cx, cx
     jz .loop
-    mov ah, 0x0E ; Print the character that was read.
+    mov ah, 0x0e ; Print the character that was read.
     int 0x10
     stosb
     dec cx
@@ -70,7 +70,7 @@ simple_input:
 .backspace:
     cmp si, di
     je .loop
-    mov ah, 0x0E
+    mov ah, 0x0e
     mov al, 0x08
     int 0x10
     mov al, ' '
@@ -81,10 +81,10 @@ simple_input:
     inc cx
     jmp .loop
 .enter:
-    mov ah, 0x0E
-    mov al, 0x0D
+    mov ah, 0x0e
+    mov al, 0x0d
     int 0x10
-    mov al, 0x0A
+    mov al, 0x0a
     int 0x10
     xor al, al
     stosb ; Store 0 into ES:DI.
