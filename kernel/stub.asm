@@ -5,7 +5,10 @@ bits 16
 %include "kernel/defines.asm"
 
 ; Call initialisation routines
+cli
 call init_ivt
+call init_pit
+sti
 
 ; Print "me" to the screen.
 mov si, stub
@@ -41,5 +44,7 @@ buf times 64 db 0
 ; Include dependencies here
 
 %include "kernel/drivers/ivt.asm"
+%include "kernel/drivers/pit.asm"
 %include "kernel/drivers/simple_io.asm"
 %include "kernel/drivers/int80_hook.asm"
+%include "kernel/drivers/int08_hook.asm"

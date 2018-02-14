@@ -10,6 +10,6 @@ int80_hook:
     call simple_print
     pop ds
     popa
-    ret
+    iret
 
 .msg db "int 0x80 called.", 0x0d, 0x0a, 0
