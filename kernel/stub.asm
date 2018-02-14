@@ -14,17 +14,20 @@ sti
 mov si, stub
 call simple_print
 
-; disk in DL passed by the bootloader
-mov cx, 512
-xor eax, eax
-loop:
-    push eax
-    call disk_read_byte
-    mov ah, 0x0e
-    int 0x10
-    pop eax
-    inc eax
-    loop loop
+; test load a file
+push 0x1000
+pop es
+mov esi, filename
+mov ebx, 0
+call load_file
+push es
+pop ds
+mov si, 0
+call simple_print
+push KERNEL_SEGMENT
+push KERNEL_SEGMENT
+pop ds
+pop es
 
 ; Print a prompt. The code:
 ; 1: Prints a DOS-style prompt,
@@ -52,6 +55,7 @@ prompt db 0x0d, 0x0a, 'C:\>', 0
 ; Buffer of 0's, 64 in length.
 buf times 64 db 0
 
+filename db "hello.txt", 0
 
 ; Include dependencies here
 

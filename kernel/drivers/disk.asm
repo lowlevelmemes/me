@@ -134,6 +134,7 @@ disk_read_byte:
     push ecx
     push edx
     push ds
+
     push KERNEL_SEGMENT
     pop ds
     
@@ -149,9 +150,13 @@ disk_read_byte:
     .load:
     mov dword [sector_in_buffer], eax
     mov byte [disk_buffer_status], 1
+    push es
+    push KERNEL_SEGMENT
+    pop es
     mov ebx, disk_buffer
     mov ecx, 1
     call read_sectors
+    pop es
     .dont_load:
     cmp byte [disk_buffer_status], 0
     je .load
@@ -174,8 +179,8 @@ disk_read_word:
     ; DL = drive
     ; returns AX = word (trashes EAX)
     
-    push eax
     push ebx
+    push eax
     inc eax
     call disk_read_byte
     shl eax, 8
@@ -192,8 +197,8 @@ disk_read_dword:
     ; DL = drive
     ; returns EAX = dword (trashes EAX)
     
-    push eax
     push ebx
+    push eax
     add eax, 2
     call disk_read_word
     shl eax, 16
