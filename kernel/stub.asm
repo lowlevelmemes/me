@@ -14,40 +14,29 @@ sti
 mov si, stub
 call simple_print
 
-; test load a file
+; test launch a userland program
 push 0x1000
 pop es
 mov esi, filename
 mov ebx, 0
 call load_file
-push es
-pop ds
-mov si, 0
-call simple_print
-push KERNEL_SEGMENT
-push KERNEL_SEGMENT
-pop ds
-pop es
 
-; Print a prompt. The code:
-; 1: Prints a DOS-style prompt,
-; 2: Reads from the keyboard,
-; 3: Does it all again.
-prompt_loop:
-    mov si, prompt
-    call simple_print
-    mov di, buf
-    mov cx, 64
-    call simple_input
-    int 0x80            ; test int 0x80
-    mov si, buf
-    call simple_print
-    jmp prompt_loop
-
-
-halt:
-    hlt
-    jmp halt
+; program calling initialisation
+mov ax, 0x1000
+mov ds, ax
+mov es, ax
+mov fs, ax
+mov gs, ax
+mov ss, ax
+mov esp, 0xfff0
+xor eax, eax
+xor ebx, ebx
+xor ecx, ecx
+xor edx, edx
+xor esi, esi
+xor edi, edi
+xor ebp, ebp
+jmp 0x1000:0x0000
 
 ; Null-terminated strings we print.
 stub db 'me', 0x0d, 0x0a, 0
@@ -55,7 +44,7 @@ prompt db 0x0d, 0x0a, 'C:\>', 0
 ; Buffer of 0's, 64 in length.
 buf times 64 db 0
 
-filename db "hello.txt", 0
+filename db "generic_program.bin", 0
 
 ; Include dependencies here
 
@@ -66,3 +55,4 @@ filename db "hello.txt", 0
 %include "kernel/drivers/int08_hook.asm"
 %include "kernel/drivers/disk.asm"
 %include "kernel/drivers/echfs.asm"
+%include "kernel/syscalls/syscalls.asm"

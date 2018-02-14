@@ -18,6 +18,7 @@ truncate --size=-4096 me.img
 nasm kernel/stub.asm -f bin -o me.bin
 ./echfs-utils me.img import me.bin me.bin
 
-./echfs-utils me.img import hello.txt hello.txt
+nasm userland/generic_program.asm -f bin -o generic_program.bin
+./echfs-utils me.img import generic_program.bin generic_program.bin
 
 exit 0

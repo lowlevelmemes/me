@@ -9,8 +9,16 @@ simple_print:
     lodsb                   ; Load character from string
     test al, al             ; Is is the 0x00 terminator?
     jz .done                ; If it is, exit routine
+    cmp al, 0x0a
+    je .newline
     int 0x10                ; Call BIOS
     jmp .loop               ; Repeat!
+.newline:
+    mov al, 0x0d
+    int 0x10
+    mov al, 0x0a
+    int 0x10
+    jmp .loop
 .done:
     pop si                  ; Restore registers
     pop ax
