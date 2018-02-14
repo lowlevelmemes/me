@@ -14,6 +14,18 @@ sti
 mov si, stub
 call simple_print
 
+; disk in DL passed by the bootloader
+mov cx, 512
+xor eax, eax
+loop:
+    push eax
+    call disk_read_byte
+    mov ah, 0x0e
+    int 0x10
+    pop eax
+    inc eax
+    loop loop
+
 ; Print a prompt. The code:
 ; 1: Prints a DOS-style prompt,
 ; 2: Reads from the keyboard,
@@ -48,3 +60,5 @@ buf times 64 db 0
 %include "kernel/drivers/simple_io.asm"
 %include "kernel/drivers/int80_hook.asm"
 %include "kernel/drivers/int08_hook.asm"
+%include "kernel/drivers/disk.asm"
+%include "kernel/drivers/echfs.asm"
