@@ -1,4 +1,4 @@
-BYTES_PER_BLOCK equ 32768
+BYTES_PER_BLOCK equ 512
 
 load_file:
 
@@ -6,23 +6,27 @@ load_file:
 ;     Loads a file from an echidnaFS formatted drive (root dir only)
 ; **********************************************************************
 
-; THIS FUNCTION ONLY WORKS IF DS == KERNEL_SEGMENT
-
 ; IN:
 ; es:ebx	-->		Target segment:offset
 ; ds:esi	-->		Filename
 ; dl		-->		Drive number
 
+; OUT:
+; ecx       -->     File size
+
 push eax
 push ebx
-push ecx
 push edx
 push esi
 push edi
+push fs
 
-mov byte [.current_drive], dl
-mov dword [.target_buffer], ebx
-mov dword [.buffer_pushing], 0
+push KERNEL_SEGMENT
+pop fs
+
+mov byte [fs:.current_drive], dl
+mov dword [fs:.target_buffer], ebx
+mov dword [fs:.buffer_pushing], 0
 
 mov eax, 12
 call disk_read_dword
@@ -38,11 +42,11 @@ inc eax
 mov ebx, BYTES_PER_BLOCK
 mul ebx
 add eax, (16 * BYTES_PER_BLOCK) ; fat start
-mov dword [.directory_start], eax
+mov dword [fs:.directory_start], eax
 
 .entry_test:
 push eax
-mov dl, byte [.current_drive]
+mov dl, byte [fs:.current_drive]
 call disk_read_dword
 test eax, eax
 jz .not_found
@@ -62,9 +66,14 @@ jnc .next_entry
 pop eax
 
 ; entry found
+push eax
 add eax, 240
 call disk_read_dword
-mov dword [.cur_block], eax
+mov dword [fs:.cur_block], eax
+pop eax
+add eax, 248
+call disk_read_dword
+mov dword [fs:.file_size], eax
 jmp .load_chain
 
 .next_entry:
@@ -74,25 +83,25 @@ jmp .entry_test
 
 .load_chain:
 ; load block
-mov eax, dword [.cur_block]
+mov eax, dword [fs:.cur_block]
 mov ebx, BYTES_PER_BLOCK / 512
 mul ebx
-mov ebx, dword [.target_buffer]
-add ebx, dword [.buffer_pushing]
-mov dl, byte [.current_drive]
+mov ebx, dword [fs:.target_buffer]
+add ebx, dword [fs:.buffer_pushing]
+mov dl, byte [fs:.current_drive]
 mov ecx, BYTES_PER_BLOCK / 512
 call read_sectors
 ; fetch next block
-mov eax, dword [.cur_block]
+mov eax, dword [fs:.cur_block]
 mov ebx, 8
 mul ebx
 add eax, (16 * BYTES_PER_BLOCK) ; fat start
-mov dl, byte [.current_drive]
+mov dl, byte [fs:.current_drive]
 call disk_read_dword
 cmp eax, 0xffffffff
 je .success
-mov dword [.cur_block], eax
-add dword [.buffer_pushing], BYTES_PER_BLOCK
+mov dword [fs:.cur_block], eax
+add dword [fs:.buffer_pushing], BYTES_PER_BLOCK
 jmp .load_chain
 
 .not_found:
@@ -104,14 +113,16 @@ jmp .done
 clc
 
 .done:
+mov ecx, dword [fs:.file_size]
+pop fs
 pop edi
 pop esi
 pop edx
-pop ecx
 pop ebx
 pop eax
 ret
 
+.file_size              dd 0
 .buffer_pushing         dd 0
 .target_buffer          dd 0
 .directory_start        dd 0

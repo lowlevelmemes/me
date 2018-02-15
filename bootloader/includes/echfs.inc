@@ -1,4 +1,4 @@
-BYTES_PER_BLOCK equ 32768
+BYTES_PER_BLOCK equ 512
 
 load_file:
 

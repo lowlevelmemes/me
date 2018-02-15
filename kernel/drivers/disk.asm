@@ -22,30 +22,17 @@ push esi
 push edi
 push ds
 
-push KERNEL_SEGMENT
+push BIOS_DISK_BUF_SEG
 pop ds
 
 .loop:
 
-push es
-push ebx
-
-mov bx, BIOS_DISK_BUF_SEG							; Load in a temp buffer
-mov es, bx
-xor bx, bx
-
-call .read_sector						; Read sector
-
-pop ebx
-pop es
+call .read_sector_to_buf						; Read sector
 
 jc .done								; If carry exit with flag
 
 mov edi, ebx
 xor esi, esi
-
-push BIOS_DISK_BUF_SEG
-pop ds
 
 push ecx
 mov ecx, 512
@@ -67,16 +54,7 @@ pop ebx
 pop eax
 ret										; Exit routine
 
-.read_sector:
-
-; IN:
-; EAX = LBA sector to load
-; DL = Drive number
-; ES = Buffer segment
-; BX = Buffer offset
-
-; OUT:
-; Carry if error
+.read_sector_to_buf:
 
 push eax
 push ebx
@@ -84,10 +62,11 @@ push ecx
 push edx
 push esi
 push edi
+push ds
 
-push es
-pop word [.target_segment]
-mov word [.target_offset], bx
+push KERNEL_SEGMENT
+pop ds
+
 mov dword [.lba_address_low], eax
 
 xor esi, esi
@@ -98,6 +77,7 @@ clc										; Clear carry for int 0x13 because some BIOSes may not clear it on 
 
 int 0x13								; Call int 0x13
 
+pop ds
 pop edi
 pop esi
 pop edx
@@ -112,7 +92,7 @@ align 4
     .unused             db  0
     .count              dw  1
     .target_offset      dw  0
-    .target_segment     dw  0
+    .target_segment     dw  BIOS_DISK_BUF_SEG
     .lba_address_low    dd  0
     .lba_address_high   dd  0
 
