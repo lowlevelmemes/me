@@ -113,18 +113,78 @@ screen:
 vbe_init:
     push es ; Save the Extra Segment Register - I've read hat some BIOses will destroy ES.
     mov dword[vbe_info], "VBE2"
-    mov ax, 0x4F00
+    mov ax, 0x4f00
     mov di, vbe_info
     int 0x10
     pop es
 
     ; Check if VBE is available
-    cmp ax, 0x4F
+    cmp ax, 0x4f
     jne .no_vbe
 
     cmp dword[vbe_info], "VESA"
     jne .no_vbe
+
+    ; Check if we are using an older VBE standard
+    cmp [vbe_info.version], 0x200
+    jl .old_vbe
+
+    ; Read EDID to determine a suitable mode. wiki.osdev.org/EDID
+    push es,
+    mov ax, 0x4f01
+    mov bl, 1
+    xor cx, cx
+    xor dx, dx
+    mov di, vbe_edid
+    int 0x10
+    pop es
+    
+    ; Succ?
+    cmp ax, 0x4f
+    jne .use_default ; Failed EDID.
+    
+    ; If the byte is zero, it means there is no specific mode. Use the default instead.
+    cmp byte[vbe_edid.timing_desc1], 0x00
+    je .use_default    
+    
+    ; Width. 
+    mov ax, byte[vbe_edid.timing_desc1+2]
+    mov [vbe_width], ax
+    mov ax, byte[vbe_edid.timing_desc1+4]
+    and ax, 0xf0
+    shl ax, 4
+    or [vbe_width], ax
+
+    ; Height.
+    mov ax, byte[vbe_edid.timing_desc1+5]
+    mov [vbe_height], ax
+    mov ax, byte[vbe_edid.timing_desc1+7]
+    and ax, 0xf0
+    shl ax, 4
+    or [vbe_height], ax
+
+    ; Check that the dimensions were calculated properly.
+    cmp [vbe_width], 0
+    je .use_default
+    
+    cmp [vbe_height], 0
+    je .use_default
+
+    ; TODO: Set mode.
+
 .no_vbe:
-    ; TODO: Error print.
+    mov si, .no_vbe_msg
+    call simple_print
     cli
     hlt
+.old_vbe:
+    mov si, .old_vbe_msg
+    call simple_print
+    cli
+    hlt
+.use_default:
+    mov vbe_width, WIDTH
+    mov vbe_height, HEIGHT
+.no_vbe_msg db 'VESA BIOS extensions unavailable, aborting...', 0x0d, 0x0a, 0
+.old_vbe_msg db 'Error: We need VBE 2.0 or newer, aborting...', 0x0d, 0x0a, 0
+.bad_mode_msg db 'Failed setting VBE mode, aborting...', 0x0d, 0x0a, 0
