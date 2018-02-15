@@ -17,8 +17,19 @@ call simple_print
 ; test launch a userland program
 mov esi, filename
 call start_task
+mov esi, filename
+call start_task
+mov esi, filename
+call start_task
+mov esi, filename
+call start_task
+mov esi, filename
+call start_task
 
-jmp $
+; enable scheduler
+mov byte [sched_status], 1
+
+jmp $       ; halt
 
 ; Null-terminated strings we print.
 stub db 'me', 0x0d, 0x0a, 0
@@ -35,7 +46,6 @@ filename db "generic_program.bin", 0
 %include "kernel/drivers/pit.asm"
 %include "kernel/drivers/simple_io.asm"
 %include "kernel/drivers/int80_hook.asm"
-%include "kernel/drivers/int08_hook.asm"
 %include "kernel/drivers/disk.asm"
 %include "kernel/drivers/echfs.asm"
 %include "kernel/syscalls/syscalls.asm"
