@@ -1,3 +1,44 @@
+; Print a hex number in EDI
+hex_print:
+    pushad
+    push ds
+
+    push KERNEL_SEGMENT
+    pop ds
+
+    mov ah, 0x0e
+    mov al, '0'
+    int 0x10
+    mov al, 'x'
+    int 0x10
+
+    push edi
+    pop eax
+
+    mov cx, 8
+  .loop:
+    push eax
+    push cx
+    dec cl
+    shl cl, 2
+    shr eax, cl
+    and al, 0x0f
+    xor bx, bx
+    mov bl, al
+    mov al, byte [.hex_tab + bx]
+    mov ah, 0x0e
+    int 0x10
+    pop cx
+    pop eax
+    loop .loop
+
+    pop ds
+    popad
+    ret
+
+.hex_tab    db  "0123456789abcdef"
+
+
 ; Print a string using the BIOS.
 ; IN:
 ; DS:SI - Points to a string terminated by 0x00.

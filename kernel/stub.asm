@@ -6,6 +6,11 @@ bits 16
 
 ; Call initialisation routines
 cli
+call detect_mem
+mov si, memmsg
+call simple_print
+mov edi, dword [memory_size]
+call hex_print
 call init_ivt
 call init_pit
 sti
@@ -32,16 +37,16 @@ mov byte [sched_status], 1
 jmp $       ; halt
 
 ; Null-terminated strings we print.
-stub db 'me', 0x0d, 0x0a, 0
-prompt db 0x0d, 0x0a, 'C:\>', 0
-; Buffer of 0's, 64 in length.
-buf times 64 db 0
+stub db 0x0a, 'me', 0x0a, 0
+
+memmsg db "Bytes of memory detected: ", 0x00
 
 filename db "generic_program.bin", 0
 
 ; Include dependencies here
 
 %include "kernel/tasking.asm"
+%include "kernel/alloc.asm"
 %include "kernel/drivers/ivt.asm"
 %include "kernel/drivers/pit.asm"
 %include "kernel/drivers/simple_io.asm"
