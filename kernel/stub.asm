@@ -8,6 +8,9 @@ bits 16
 cli
 call init_ivt
 call init_pit
+;call check_cpuid
+;call enable_sse
+call vbe_init
 sti
 
 ; Print "me" to the screen.
@@ -49,3 +52,5 @@ filename db "generic_program.bin", 0
 %include "kernel/drivers/disk.asm"
 %include "kernel/drivers/echfs.asm"
 %include "kernel/syscalls/syscalls.asm"
+%include "kernel/drivers/vbe.asm"
+;%include "kernel/init.asm"
