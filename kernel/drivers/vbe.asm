@@ -1,10 +1,5 @@
 bits 16
 
-; Buffer can be a maximum of 16MiB in size.
-VBE_BUFFER equ 0x1000000 
-VBE_PHYS_BUFFER equ 0xD0000000
-VBE_BACK_BUFFER equ VBE_PHYS_BUFFER + VBE_PHYS_BUFFER
-
 ; The default W/H of the screen.
 WIDTH equ 800
 HEIGHT equ 600
@@ -30,17 +25,17 @@ vbe_info:
 
 align 16
 vbe_mode_info:
-    .attributes     dd 0
+    .attributes     dw 0
     .window_a       db 0
     .window_b       db 0
-    .granularity    dd 0
-    .window_size    dd 0
-    .segment_a      dd 0
-    .segment_b      dd 0
-    .win_func_ptr   dw 0 
-    .pitch          dd 0
-    .width          dd 0
-    .height         dd 0
+    .granularity    dw 0
+    .window_size    dw 0
+    .segment_a      dw 0
+    .segment_b      dw 0
+    .win_func_ptr   dd 0 
+    .pitch          dw 0
+    .width          dw 0
+    .height         dw 0
     .w_char         db 0
     .y_char         db 0
     .planes         db 0
@@ -61,9 +56,9 @@ vbe_mode_info:
     .resv_pos       db 0
     .dir_colour     db 0
 
-    .framebuffer    dw 0
-    .off_mem_off    dw 0
-    .off_mem_size   dd 0
+    .framebuffer    dd 0
+    .off_mem_off    dd 0
+    .off_mem_size   dw 0
     .reserved1      times 206 db 0
 
 align 16
@@ -111,8 +106,16 @@ screen:
 
 ; vbe_init - Perform the VBE initialisation.
 vbe_init:
-    push es ; Save the Extra Segment Register - I've read hat some BIOses will destroy ES.
-    mov dword[vbe_info], "VBE2"
+    pushad
+    push ds
+    push es
+
+    push KERNEL_SEGMENT
+    push KERNEL_SEGMENT
+    pop ds
+    pop es
+
+    push es ; Save the Extra Segment Register - I've read that some BIOses will destroy ES.
     mov ax, 0x4f00
     mov di, vbe_info
     int 0x10
@@ -122,15 +125,15 @@ vbe_init:
     cmp ax, 0x4f
     jne .no_vbe
 
-    cmp dword[vbe_info], "VESA"
+    cmp dword [vbe_info], "VESA"
     jne .no_vbe
 
     ; Check if we are using an older VBE standard
-    cmp word[vbe_info.version], 0x200
+    cmp word [vbe_info.version], 0x200
     jl .old_vbe
 
     ; Read EDID to determine a suitable mode. wiki.osdev.org/EDID
-    push es,
+    push es
     mov ax, 0x4f01
     mov bl, 1
     xor cx, cx
@@ -138,57 +141,56 @@ vbe_init:
     mov di, vbe_edid
     int 0x10
     pop es
-    
+
     ; Succ?
     cmp ax, 0x4f
     jne .use_default ; Failed EDID.
-    
+
     ; If the byte is zero, it means there is no specific mode. Use the default instead.
-    cmp byte[vbe_edid.timing_desc1], 0x00
+    cmp byte [vbe_edid.timing_desc1], 0x00
     je .use_default    
-    
+
     ; Width. 
-    mov ax, word[vbe_edid.timing_desc1+2]
-    mov [vbe_width], ax
-    mov ax, word[vbe_edid.timing_desc1+4]
+    mov ax, word [vbe_edid.timing_desc1+2]
+    mov word [vbe_width], ax
+    mov ax, word [vbe_edid.timing_desc1+4]
     and ax, 0xf0
     shl ax, 4
-    or [vbe_width], ax
+    or word [vbe_width], ax
 
     ; Height.
-    mov ax, word[vbe_edid.timing_desc1+5]
-    mov [vbe_height], ax
-    mov ax, word[vbe_edid.timing_desc1+7]
+    mov ax, word [vbe_edid.timing_desc1+5]
+    mov word [vbe_height], ax
+    mov ax, word [vbe_edid.timing_desc1+7]
     and ax, 0xf0
     shl ax, 4
-    or [vbe_height], ax
+    or word [vbe_height], ax
 
     ; Check that the dimensions were calculated properly.
-    cmp word[vbe_width], 0
+    cmp word [vbe_width], 0
     je .use_default
-    
-    cmp word[vbe_height], 0
+
+    cmp word [vbe_height], 0
     je .use_default
 
     ; Set a suitable mode.
-    mov ax, [vbe_width]
-    mov bx, [vbe_height]
+    mov ax, word [vbe_width]
+    mov bx, word [vbe_height]
     mov cl, 32 ; Use 32 bpp by default
     call vbe_set_mode
     jc .use_default
+    jmp .out
 
-    ret ; init complete, return
 .use_default:
-    mov word[vbe_width], WIDTH
-    mov word[vbe_height], HEIGHT
+    mov word [vbe_width], WIDTH
+    mov word [vbe_height], HEIGHT
 .set_mode:
-    mov ax, [vbe_width]
-    mov bx, [vbe_height]
+    mov ax, word [vbe_width]
+    mov bx, word [vbe_height]
     mov cl, 32
     call vbe_set_mode
     jc .bad_mode ; Can't use the default, abort
-    
-    ret
+    jmp .out
 
 .no_vbe:
     mov si, .no_vbe_msg
@@ -205,56 +207,74 @@ vbe_init:
     call simple_print
     cli
     hlt
-.no_vbe_msg db 'VESA BIOS extensions unavailable, aborting...', 0x0d, 0x0a, 0
-.old_vbe_msg db 'Error: We need VBE 2.0 or newer, aborting...', 0x0d, 0x0a, 0
-.bad_mode_msg db 'Failed setting VBE mode, aborting...', 0x0d, 0x0a, 0
+.out:
+    pop es
+    pop ds
+    popad
+    ret
 
-; https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial
+.no_vbe_msg db 'VESA BIOS extensions unavailable, aborting...', 0x0a, 0
+.old_vbe_msg db 'Error: We need VBE 2.0 or newer, aborting...', 0x0a, 0
+.bad_mode_msg db 'Failed setting VBE mode, aborting...', 0x0a, 0
+
+; reference: https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial
+; width -> AX
+; height -> BX
+; bpp -> CL
 vbe_set_mode:
+    pushad
+    push ds
+    push es
+    push fs
+
+    push KERNEL_SEGMENT
+    push KERNEL_SEGMENT
+    pop ds
+    pop es
+
     ; Save arguments
-    mov [.width], ax
-    mov [.height], bx
-    mov [.bpp], cl
-    
+    mov word [.width], ax
+    mov word [.height], bx
+    mov byte [.bpp], cl
+
     ; Get an array of available video modes.
     push es ; Save ES
-    mov dword [vbe_info], "VBE2"
     mov ax, 0x4f00
     mov di, vbe_info ; Return saved here.
     int 0x10
     pop es
-    
+
     ; Check if success
     cmp ax, 0x4f
     jne .error
 
-    ; Save video mode array into AX
-    mov ax, [vbe_info.modes]
+    ; Save video mode array into FS:SI
     ; Save offset
-    mov [.offset], ax
+    mov ax, word [vbe_info.modes]
+    mov word [.offset], ax
+    mov si, ax
     ; Save segment
-    mov ax, [vbe_info.modes+2]
-    mov [.segment], ax
-
-    mov ax, [.segment]
+    mov ax, word [vbe_info.modes+2]
     mov fs, ax
-    mov si, [.offset]
 
 .find_mode:
-    mov dx, [fs:si]
-    add si, 2
-    mov [.offset], si
-    mov [.mode], dx
-    xor ax, ax ; zero AX
-    mov fs, ax
+    mov dx, word [fs:si]
 
-    cmp word[.mode], 0xFFFF
-    je .error
-    
+    ; gotta go fast
+    not dx
+    test dx, dx
+    jz .error
+    not dx
+
+    ; save mode
+    add si, 2
+    mov word [.offset], si
+    mov word [.mode], dx
+
     ; Return modeinfo
     push es
     mov ax, 0x4f01
-    mov cx, [.mode] ; current mode
+    mov cx, dx ; current mode
     mov di, vbe_mode_info
     int 0x10
     pop es
@@ -263,51 +283,51 @@ vbe_set_mode:
     jne .error
 
     ; Check if the data we have is correct.
-    mov ax, .width
-    cmp ax, [vbe_mode_info.width]
+    mov ax, word [.width]
+    cmp ax, word [vbe_mode_info.width]
     jne .next_mode
-    
-    mov ax, .height
-    cmp ax, [vbe_mode_info.height]
+
+    mov ax, word [.height]
+    cmp ax, word [vbe_mode_info.height]
     jne .next_mode
-    
-    mov al, .bpp
-    cmp al, [vbe_mode_info.bpp]
+
+    mov al, byte [.bpp]
+    cmp al, byte [vbe_mode_info.bpp]
     jne .next_mode
 
     ; LFB supported?
-    test byte[vbe_mode_info.attributes], 0x81
+    test byte [vbe_mode_info.attributes], 0x81
     jz .next_mode
-    
-    ; If we are here, the mode is correct. Time to set it!
-	mov ax, [.width]
-	mov word[screen.width], ax
-	mov ax, [.height]
-	mov word[screen.height], ax
-	mov eax, [vbe_mode_info.framebuffer]
-	mov dword[screen.phys_buffer], eax
-	mov ax, [vbe_mode_info.pitch]
-	mov word[screen.bytes_per_l], ax
-	mov eax, 0
-	mov al, [.bpp]
-	mov byte[screen.bpp], al
-	shr eax, 3
-	mov dword[screen.bytes_per_pix], eax
 
-    mov ax, [.width]
+    ; If we are here, the mode is correct. Time to set it!
+	mov ax, word [.width]
+	mov word [screen.width], ax
+	mov ax, word [.height]
+	mov word [screen.height], ax
+	mov eax, dword [vbe_mode_info.framebuffer]
+	mov dword [screen.phys_buffer], eax
+	mov ax, word [vbe_mode_info.pitch]
+	mov word [screen.bytes_per_l], ax
+	xor eax, eax
+	mov al, byte [.bpp]
+	mov byte [screen.bpp], al
+	shr eax, 3
+	mov dword [screen.bytes_per_pix], eax
+
+    mov ax, word [.width]
     shr ax, 3
     dec ax
-    mov word[screen.x_max], ax
+    mov word [screen.x_max], ax
 
-    mov ax, [.height]
+    mov ax, word [.height]
     shr ax, 4
     dec ax
-    mov word[screen.y_max], ax
+    mov word [screen.y_max], ax
 
     ; Set mode
     push es
     mov ax, 0x4f02
-    mov bx, [.mode]
+    mov bx, word [.mode]
     ; Enable linear framebuffer.
     or bx, 0x4F00
     mov di, 0
@@ -318,23 +338,24 @@ vbe_set_mode:
     jne .error
 
     clc
-    ret
+    jmp .out
 
 .next_mode:
-    mov ax, [.segment]
-    mov fs, ax
-    mov si, [.offset]
+    mov si, word [.offset]
     jmp .find_mode
 
 .error:
-    mov ax, 0
-    mov fs, ax
     stc
+
+.out:
+    pop fs
+    pop es
+    pop ds
+    popad
     ret
 
 .width dw 0
 .height dw 0
 .bpp db 0
-.segment dw 0
 .offset dw 0
 .mode dw 0
