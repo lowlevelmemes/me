@@ -1,5 +1,4 @@
 read_sectors:
-
 ; ********************************************
 ;     Reads multiple LBA addressed sectors
 ; ********************************************
@@ -13,78 +12,75 @@ read_sectors:
 
 ; OUT:
 ; Carry if error
+    push eax									; Save GPRs
+    push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
+    push ds
 
-push eax									; Save GPRs
-push ebx
-push ecx
-push edx
-push esi
-push edi
-push ds
-
-push BIOS_DISK_BUF_SEG
-pop ds
+    push BIOS_DISK_BUF_SEG
+    pop ds
 
 .loop:
+    call .read_sector_to_buf				; Read sector
 
-call .read_sector_to_buf						; Read sector
+    jc .done								; If carry exit with flag
 
-jc .done								; If carry exit with flag
+    mov edi, ebx
+    xor esi, esi
 
-mov edi, ebx
-xor esi, esi
+    push ecx
+    mov ecx, 512
+    a32 o32 rep movsb
+    pop ecx
 
-push ecx
-mov ecx, 512
-a32 o32 rep movsb
-pop ecx
+    inc eax									; Increment sector
+    add ebx, 512							; Add 512 to the buffer
 
-inc eax									; Increment sector
-add ebx, 512							; Add 512 to the buffer
-
-loop .loop								; Loop!
+    loop .loop								; Loop!
 
 .done:
-pop ds
-pop edi
-pop esi
-pop edx
-pop ecx									; Restore GPRs
-pop ebx
-pop eax
-ret										; Exit routine
+    pop ds
+    pop edi
+    pop esi
+    pop edx
+    pop ecx								; Restore GPRs
+    pop ebx
+    pop eax
+    ret									; Exit routine
 
 .read_sector_to_buf:
+    push eax
+    push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
+    push ds
 
-push eax
-push ebx
-push ecx
-push edx
-push esi
-push edi
-push ds
+    push KERNEL_SEGMENT
+    pop ds
 
-push KERNEL_SEGMENT
-pop ds
+    mov dword [.lba_address_low], eax
 
-mov dword [.lba_address_low], eax
+    xor esi, esi
+    mov si, .da_struct
+    mov ah, 0x42
 
-xor esi, esi
-mov si, .da_struct
-mov ah, 0x42
+    clc										; Clear carry for int 0x13 because some BIOSes may not clear it on success
 
-clc										; Clear carry for int 0x13 because some BIOSes may not clear it on success
+    int 0x13								; Call int 0x13
 
-int 0x13								; Call int 0x13
-
-pop ds
-pop edi
-pop esi
-pop edx
-pop ecx
-pop ebx
-pop eax
-ret										; Exit routine
+    pop ds
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+    ret										; Exit routine
 
 align 4
 .da_struct:
@@ -96,11 +92,7 @@ align 4
     .lba_address_low    dd  0
     .lba_address_high   dd  0
 
-
-
-
-
-
+; Buffer and buffer status data.
 disk_buffer times 512 db 0
 disk_buffer_status db 0
 sector_in_buffer dd 0
@@ -200,28 +192,28 @@ disk_cmp_strings:
     push esi
     
     clc
-    .loop:
-        push eax
-        call disk_read_byte
-        mov ah, al
-        a32 o32 lodsb
-        cmp ah, al
-        jne .notequ
-        test al, al
-        jz .equ
-        pop eax
-        inc eax
-        jmp .loop
+.loop:
+    push eax
+    call disk_read_byte
+    mov ah, al
+    a32 o32 lodsb
+    cmp ah, al
+    jne .notequ
+    test al, al
+    jz .equ
+    pop eax
+    inc eax
+    jmp .loop
     
-    .notequ:
-        clc
-        jmp .done
+.notequ:
+    clc
+    jmp .done
     
-    .equ:
-        stc
+.equ:
+    stc
 
-    .done:
-        pop eax
-        pop esi
-        pop eax
-        ret
+.done:
+    pop eax
+    pop esi
+    pop eax
+    ret
