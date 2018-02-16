@@ -1,8 +1,11 @@
 s/\.byte/db/g
 s/\.word/dw/g
 s/\.ascii/db/g
+s/br /jmp /g
+s/blt /jl /g
 /^\!/ d
-/^\.[a-Z]/ d
+/^\.[a-z]/ d
+/^\.[G-Z]/ d
 /^export/ d
 s/\*//g
 s/\#//g

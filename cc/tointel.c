@@ -4,23 +4,23 @@
 int main(void) {
 
     for (;;) {
-        char val[64];
+        char str[128];
         int c = getchar();
-        if (c == '-' || isdigit(c)) {
-            /* store number */
+        if (c == '-' || c == '_' || isalnum(c)) {
+            /* store string */
             for (size_t i = 0; ; i++) {
-                val[i] = c;
+                str[i] = c;
                 c = getchar();
-                if (!isdigit(c) && c != 'x' && !isxdigit(c)) {
-                    val[++i] = 0;
+                if (c != '_' && !isalnum(c)) {
+                    str[++i] = 0;
                     break;
                 }
             }
             if (c == '[') {
-                printf("[%s+", val);
+                printf("[%s+", str);
                 c = getchar();
             } else {
-                fputs(val, stdout);
+                fputs(str, stdout);
             }
         }
         if (c == EOF)
