@@ -15,14 +15,16 @@ call init_ivt
 call init_pit
 ;call check_cpuid
 ;call enable_sse
-call vbe_init
-cli
-hlt
+;call vbe_init
 sti
 
 ; Print "me" to the screen.
 mov si, stub
 call simple_print
+
+pusha
+call _cmain
+popa
 
 ; test launch a userland program
 mov esi, filename
@@ -50,6 +52,7 @@ filename db "generic_program.bin", 0
 
 ; Include dependencies here
 
+%include "cc/system.c.asm"
 %include "kernel/tasking.asm"
 %include "kernel/alloc.asm"
 %include "kernel/drivers/ivt.asm"

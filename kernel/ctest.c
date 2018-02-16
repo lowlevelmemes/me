@@ -1,12 +1,41 @@
-int ackermann(int x, int y) {
-    if (x < 0 || y < 0)
-        return -1;
+#include <system.h>
 
-    if (x == 0)
-        return y + 1;
+char cputchar_char = 0;
+void cputchar(char c) {
 
-    if (y == 0)
-        return ackermann(x - 1, 1);
+    if (c == '\n') {
+        asm("pusha");
+        asm("mov ah, 0x0e");
+        asm("mov al, 0x0d");
+        asm("int 0x10");
+        asm("mov al, 0x0a");
+        asm("int 0x10");
+        asm("popa");
+    } else {
+        cputchar_char = c;
+        asm("pusha");
+        asm("mov al, byte [_cputchar_char]");
+        asm("mov ah, 0x0e");
+        asm("int 0x10");
+        asm("popa");
+    }
 
-    return ackermann(x - 1, ackermann(x, y - 1));
+}
+
+void cprint(char *str) {
+    int i;
+
+    for (i = 0; str[i]; i++)
+        cputchar(str[i]);
+
+    return;
+
+}
+
+void cmain(void) {
+
+    cprint("hello, C world!\n");
+
+    return;
+
 }

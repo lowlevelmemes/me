@@ -1,3 +1,6 @@
+s/\.byte/db/g
+s/\.word/dw/g
+s/\.ascii/db/g
 /^\!/ d
 /^\.[a-Z]/ d
 /^export/ d

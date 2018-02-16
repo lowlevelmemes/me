@@ -4,5 +4,5 @@ me.img
 echfs-utils.c
 echfs-utils
 generic_program.bin
-kernel/**/*.c.asm
+**/*.c.asm
 cc/tointel
