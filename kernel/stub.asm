@@ -16,6 +16,8 @@ call init_pit
 ;call check_cpuid
 ;call enable_sse
 call vbe_init
+cli
+hlt
 sti
 
 ; Print "me" to the screen.
@@ -59,3 +61,4 @@ filename db "generic_program.bin", 0
 %include "kernel/syscalls/syscalls.asm"
 %include "kernel/drivers/vbe.asm"
 ;%include "kernel/init.asm"
+%include "kernel/ctest.c.asm"
