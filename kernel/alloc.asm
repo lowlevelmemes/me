@@ -1,6 +1,9 @@
 ext_heap_top  dd  DEFAULT_HEAP_BASE
 memory_size   dd  0
 
+; ** THIS IS A 16 BIT FUNCTION **
+bits 16
+
 detect_mem:
     pushad
 
@@ -48,7 +51,7 @@ detect_mem:
     push KERNEL_SEGMENT
     pop ds
     mov si, .errmsg
-    call simple_print
+    ;call simple_print
 .halt:
     cli
     hlt
@@ -56,6 +59,9 @@ detect_mem:
 
 .errmsg db "Error detecting memory, or not enough memory.", 0x0a
         db "System halted.", 0x00
+
+bits 32
+; ** END OF 16 BIT FUNCTION **
 
 
 ; Expand (or contract) the kernel heap by EDI bytes (signed)
@@ -86,7 +92,7 @@ sbrk:
     push KERNEL_SEGMENT
     pop ds
     mov si, .errmsg
-    call simple_print
+    ;call simple_print
 .halt:
     cli
     hlt

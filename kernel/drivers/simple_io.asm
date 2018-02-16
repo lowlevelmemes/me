@@ -1,3 +1,6 @@
+; ** THIS IS A 16 BIT FUNCTION **
+bits 16
+
 ; Print a hex number in EDI
 hex_print:
     pushad
@@ -110,3 +113,6 @@ simple_input:
     stosb ; Store 0 into ES:DI.
     popa
     ret
+
+bits 32
+; ** END OF 16 BIT FUNCTION **

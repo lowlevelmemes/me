@@ -1,3 +1,0 @@
-#!/bin/bash
-
-bcc -ansi $1 -I./cc -S -o /dev/stdout | sed -f cc/bcc.sed | cc/tointel > $1.asm

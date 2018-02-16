@@ -4,19 +4,16 @@ bits 16
 ; Include defines
 %include "kernel/defines.asm"
 
-; Call initialisation routines
-cli
+; BIOS routines relying functions here
 call detect_mem
-mov si, memmsg
-call simple_print
-mov edi, dword [memory_size]
-call hex_print
+call vbe_init
+
+; Enter REAL FUCKING MODE 32
+%include "kernel/rm32.asm"
+
+; Call initialisation routines
 call init_ivt
 call init_pit
-;call check_cpuid
-;call enable_sse
-call vbe_init
-sti
 
 ; draw a line
 pushad
@@ -25,14 +22,6 @@ popad
 
 cli
 hlt
-
-; Print "me" to the screen.
-mov si, stub
-call simple_print
-
-pushad
-call _cmain
-popad
 
 ; test launch a userland program
 mov esi, filename
@@ -60,7 +49,7 @@ filename db "generic_program.bin", 0
 
 ; Include dependencies here
 
-%include "cc/system.c.asm"
+%include "kernel/gdt.asm"
 %include "kernel/tasking.asm"
 %include "kernel/alloc.asm"
 %include "kernel/drivers/ivt.asm"
@@ -72,5 +61,4 @@ filename db "generic_program.bin", 0
 %include "kernel/syscalls/syscalls.asm"
 %include "kernel/drivers/vbe.asm"
 ;%include "kernel/init.asm"
-%include "kernel/ctest.c.asm"
 %include "kernel/drivers/graphics.c.asm"

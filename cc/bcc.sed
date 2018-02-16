@@ -1,5 +1,6 @@
 s/\.byte/db/g
 s/\.word/dw/g
+s/\.dword/dd/g
 s/\.ascii/db/g
 s/br /jmp /g
 s/blt /jl /g
@@ -10,5 +11,3 @@ s/blt /jl /g
 s/\*//g
 s/\#//g
 s/\$/0x/g
-s/push\t/push word\t/g
-s/pop\t/pop word\t/g

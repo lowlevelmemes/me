@@ -17,7 +17,7 @@ syscall_print_string:
     pop ds
 
     mov esi, edi
-    call simple_print
+    ;call simple_print
 
     xor eax, eax        ; return 0
     pop ds

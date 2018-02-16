@@ -1,13 +1,12 @@
-#include <system.h>
-
-extern long framebuffer;
-extern long width;
+extern unsigned long *framebuffer;
+extern unsigned long width;
+extern unsigned long height;
 extern char vga_font[];
 
 void plot_px(int x, int y, unsigned long hex) {
     unsigned long fb_i = x + width * y;
 
-    DRF_O_32(framebuffer + fb_i * sizeof(unsigned long), hex);
+    framebuffer[fb_i] = hex;
 
     return;
 }

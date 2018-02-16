@@ -95,6 +95,9 @@ _width          dd 0
 _height         dd 0
 _bpp            dd 0
 
+; ** THIS IS A 16 BIT FUNCTION **
+bits 16
+
 ; vbe_init - Perform the VBE initialisation.
 vbe_init:
     pushad
@@ -366,3 +369,6 @@ dump_vga_font:
     pop ds
     popad
     ret
+
+bits 32
+; ** END OF 16 BIT FUNCTION **
