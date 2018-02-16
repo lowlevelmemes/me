@@ -90,20 +90,10 @@ vbe_edid:
 
 align 32
 ; Data structure that stores information about the current state of the screen.
-screen:
-    .width          dd 0
-    .height         dd 0
-    .bpp            dd 0
-    .bytes_per_pix  dd 0
-    .bytes_per_l    dd 0
-    .screen_size    dd 0
-    .screen_size_dqwords dd 0
-    .phys_buffer    dd 0
-    .x              dd 0
-    .y              dd 0
-    .x_max          dd 0
-    .y_max          dd 0
-    .vga_font       times 4096 db 0
+_framebuffer    dd 0
+_width          dd 0
+_height         dd 0
+_bpp            dd 0
 
 ; vbe_init - Perform the VBE initialisation.
 vbe_init:
@@ -117,7 +107,7 @@ vbe_init:
     pop es
 
     ; dump vga font
-    mov di, screen.vga_font
+    mov di, _vga_font
     call dump_vga_font
 
     push es ; Save the Extra Segment Register - I've read that some BIOses will destroy ES.
@@ -139,7 +129,7 @@ vbe_init:
 
     ; Read EDID to determine a suitable mode. wiki.osdev.org/EDID
     push es
-    mov ax, 0x4f01
+    mov ax, 0x4f15
     mov bl, 1
     xor cx, cx
     xor dx, dx
@@ -306,28 +296,11 @@ vbe_set_mode:
 
     ; If we are here, the mode is correct. Time to set it!
 	mov ax, word [.width]
-	mov word [screen.width], ax
+	mov word [_width], ax
 	mov ax, word [.height]
-	mov word [screen.height], ax
+	mov word [_height], ax
 	mov eax, dword [vbe_mode_info.framebuffer]
-	mov dword [screen.phys_buffer], eax
-	mov ax, word [vbe_mode_info.pitch]
-	mov word [screen.bytes_per_l], ax
-	xor eax, eax
-	mov al, byte [.bpp]
-	mov byte [screen.bpp], al
-	shr eax, 3
-	mov dword [screen.bytes_per_pix], eax
-
-    mov ax, word [.width]
-    shr ax, 3
-    dec ax
-    mov word [screen.x_max], ax
-
-    mov ax, word [.height]
-    shr ax, 4
-    dec ax
-    mov word [screen.y_max], ax
+	mov dword [_framebuffer], eax
 
     ; Set mode
     push es
@@ -365,6 +338,7 @@ vbe_set_mode:
 .offset dw 0
 .mode dw 0
 
+_vga_font       times 4096 db 0
 ; Dump VGA font into ES:DI
 dump_vga_font:
     pushad
