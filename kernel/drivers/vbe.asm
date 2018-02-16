@@ -1,8 +1,8 @@
 bits 16
 
 ; The default W/H of the screen.
-WIDTH equ 800
-HEIGHT equ 600
+WIDTH equ 1024
+HEIGHT equ 768
 
 align 32
 vbe_width dw WIDTH
@@ -300,6 +300,7 @@ vbe_set_mode:
 	mov ax, word [.height]
 	mov word [_height], ax
 	mov eax, dword [vbe_mode_info.framebuffer]
+    sub eax, KERNEL_SEGMENT * 0x10        ; adjust for kernel segment
 	mov dword [_framebuffer], eax
 
     ; Set mode

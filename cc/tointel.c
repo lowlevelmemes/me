@@ -11,7 +11,7 @@ int main(void) {
             for (size_t i = 0; ; i++) {
                 val[i] = c;
                 c = getchar();
-                if (!isdigit(c)) {
+                if (!isdigit(c) && c != 'x' && !isxdigit(c)) {
                     val[++i] = 0;
                     break;
                 }

@@ -15,16 +15,24 @@ call init_ivt
 call init_pit
 ;call check_cpuid
 ;call enable_sse
-;call vbe_init
+call vbe_init
 sti
+
+; draw a line
+pushad
+call _test_graphics
+popad
+
+cli
+hlt
 
 ; Print "me" to the screen.
 mov si, stub
 call simple_print
 
-pusha
+pushad
 call _cmain
-popa
+popad
 
 ; test launch a userland program
 mov esi, filename
@@ -65,3 +73,4 @@ filename db "generic_program.bin", 0
 %include "kernel/drivers/vbe.asm"
 ;%include "kernel/init.asm"
 %include "kernel/ctest.c.asm"
+%include "kernel/drivers/graphics.c.asm"
