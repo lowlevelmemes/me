@@ -103,6 +103,7 @@ screen:
     .y              dd 0
     .x_max          dd 0
     .y_max          dd 0
+    .vga_font       times 4096 db 0
 
 ; vbe_init - Perform the VBE initialisation.
 vbe_init:
@@ -114,6 +115,10 @@ vbe_init:
     push KERNEL_SEGMENT
     pop ds
     pop es
+
+    ; dump vga font
+    mov di, screen.vga_font
+    call dump_vga_font
 
     push es ; Save the Extra Segment Register - I've read that some BIOses will destroy ES.
     mov ax, 0x4f00
@@ -359,3 +364,30 @@ vbe_set_mode:
 .bpp db 0
 .offset dw 0
 .mode dw 0
+
+; Dump VGA font into ES:DI
+dump_vga_font:
+    pushad
+    push ds
+
+    push di
+    push es
+
+    xor bp, bp
+    mov ax, 0x1130
+    xor bx, bx
+    mov bh, 6
+    int 0x10
+
+    mov si, bp
+    push es
+    pop ds
+    pop es
+    pop di
+
+    mov cx, 4096
+    rep movsb
+
+    pop ds
+    popad
+    ret
