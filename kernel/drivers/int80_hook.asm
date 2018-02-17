@@ -32,7 +32,7 @@ int80_hook:
     pop edx
     pop ecx
     pop ebx
-    iret
+    iretw
 .invalid:
     mov eax, -1
     jmp .invalid_out
@@ -40,4 +40,4 @@ int80_hook:
 ; Invalid syscall handler
 invalid:
     mov eax, -1
-    ret
+    iretw

@@ -57,7 +57,7 @@ int08_hook:
     pop ecx
     pop ebx
     pop eax
-    iret
+    iretw
 
 .restart:
     mov word [task_sel], 0

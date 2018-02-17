@@ -12,8 +12,12 @@ call vbe_init
 %include "kernel/rm32.asm"
 
 ; Call initialisation routines
+call init_pic
 call init_ivt
 call init_pit
+
+; enable interrupts
+sti
 
 pushad
 call _init_graphics
@@ -21,18 +25,6 @@ popad
 
 cli
 hlt
-
-; test launch a userland program
-mov esi, filename
-call start_task
-mov esi, filename
-call start_task
-mov esi, filename
-call start_task
-mov esi, filename
-call start_task
-mov esi, filename
-call start_task
 
 ; enable scheduler
 mov byte [sched_status], 1
@@ -44,10 +36,16 @@ stub db 0x0a, 'me', 0x0a, 0
 
 memmsg db "Bytes of memory detected: ", 0x00
 
-filename db "generic_program.bin", 0
+generic_program:
+.begin:
+incbin "generic_program.bin"
+.end:
+.size equ .end - .begin
 
 ; Include dependencies here
 
+%include "kernel/drivers/keyboard.asm"
+%include "kernel/drivers/pic.asm"
 %include "kernel/gdt.asm"
 %include "kernel/tasking.asm"
 %include "kernel/alloc.asm"

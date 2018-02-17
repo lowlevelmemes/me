@@ -8,17 +8,15 @@
 init_ivt:
     ; Hook the relevant interrupts
 
-    pushf
-    cli
     push ds
     push 0
     pop ds
 
     ; All hooks should go here
     int_hook 0x08, KERNEL_SEGMENT, int08_hook       ; PIT
+    int_hook 0x09, KERNEL_SEGMENT, int09_hook       ; keyboard
     int_hook 0x80, KERNEL_SEGMENT, int80_hook       ; syscall interface
 
     pop ds
-    popf
 
     ret
