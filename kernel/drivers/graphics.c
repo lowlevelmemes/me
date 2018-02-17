@@ -32,7 +32,7 @@ struct window_t {
     long y;
     long cursor_x;
     long cursor_y;
-    char grid[80 * 25];
+    char grid[WINDOW_COLS * WINDOW_ROWS];
     struct window_t *next;
 };
 
