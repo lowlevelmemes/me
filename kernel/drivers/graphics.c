@@ -11,13 +11,42 @@ extern long width;
 extern long height;
 extern char vga_font[];
 
-long tty_cols = 0;
-long tty_rows = 0;
-char *tty_grid = 0;
-long cursor_x = 0;
-long cursor_y = 0;
+struct window_t {
+    char title[128];
+    long x;
+    long y;
+    long cursor_x;
+    long cursor_y;
+    char grid[80 * 25];
+    struct window_t *next;
+};
+
+struct window_t *windows = 0;
+
+struct window_t *get_window_ptr(long windowid) {
+    long i;
+    /* check if no windows were allocated */
+    if (!windows) {
+        /* error */
+        return (struct window_t *)0;
+    } else {
+        /* else crawl the linked list to the last entry */
+        struct window_t *wptr = windows;
+        for (i = 0; i < windowid; i++) {
+            if (wptr->next) {
+                wptr = wptr->next;
+                continue;
+            } else {
+                /* error */
+                return (struct window_t *)0;
+            }
+        }
+        return wptr;
+    }
+}
 
 void *sbrk(long);
+void tty_refresh(void);
 
 void plot_px(long x, long y, unsigned long hex) {
     long fb_i = x + width * y;
@@ -46,105 +75,196 @@ void plot_char(char c, long x, long y, unsigned long hex_fg, unsigned long hex_b
     return;
 }
 
-void plot_char_grid(char c, long x, long y, unsigned long hex_fg, unsigned long hex_bg) {
-    plot_char(c, x * 8, y * 16, hex_fg, hex_bg);
-    tty_grid[x + y * tty_cols] = c;
+void plot_char_grid(char c, long x, long y, unsigned long hex_fg, unsigned long hex_bg, long windowid) {
+    struct window_t *wptr = get_window_ptr(windowid);
+    plot_char(c, x * 8 + wptr->x + 2, y * 16 + wptr->y + 20, hex_fg, hex_bg);
+    wptr->grid[x + y * 80] = c;
     return;
 }
 
-void clear_cursor(void) {
-    plot_char(tty_grid[cursor_x + cursor_y * tty_cols],
-        cursor_x * 8, cursor_y * 16, (unsigned long)0, (unsigned long)0x888888);
+void clear_cursor(long windowid) {
+    struct window_t *wptr = get_window_ptr(windowid);
+    plot_char(wptr->grid[wptr->cursor_x + wptr->cursor_y * 80],
+        wptr->x + wptr->cursor_x * 8 + 2, wptr->y + wptr->cursor_y * 16 + 20, (unsigned long)0xffffff, (unsigned long)0);
     return;
 }
 
-void draw_cursor(void) {
-    plot_char(tty_grid[cursor_x + cursor_y * tty_cols],
-        cursor_x * 8, cursor_y * 16, (unsigned long)0x888888, (unsigned long)0);
+void draw_cursor(long windowid) {
+    struct window_t *wptr = get_window_ptr(windowid);
+    plot_char(wptr->grid[wptr->cursor_x + wptr->cursor_y * 80],
+        wptr->x + wptr->cursor_x * 8 + 2, wptr->y + wptr->cursor_y * 16 + 20, (unsigned long)0, (unsigned long)0xffffff);
     return;
 }
 
-void tty_refresh(void) {
-    long i;
-
-    clear_cursor();
-    /* interpret the grid and print the chars */
-    for (i = 0; i < (tty_rows * tty_cols); i++) {
-        plot_char_grid(tty_grid[i], i % tty_cols, i / tty_cols,
-            (unsigned long)0, (unsigned long)0x888888);
-    }
-    draw_cursor();
-    return;
-}
-
-void scroll(void) {
+void scroll(long windowid) {
+    struct window_t *wptr = get_window_ptr(windowid);
     long i;
 
     /* notify grid */
-    for (i = tty_cols; i < tty_rows * tty_cols; i++)
-        tty_grid[i - tty_cols] = tty_grid[i];
+    for (i = 80; i < 25 * 80; i++)
+        wptr->grid[i - 80] = wptr->grid[i];
     /* clear the last line of the screen */
-    for (i = tty_rows * tty_cols - tty_cols; i < tty_rows * tty_cols; i++)
-        tty_grid[i] = ' ';
+    for (i = 25 * 80 - 80; i < 25 * 80; i++)
+        wptr->grid[i] = ' ';
 
     tty_refresh();
     return;
 }
 
-void tty_set_cursor_pos(long x, long y) {
-    clear_cursor();
-    cursor_x = x;
-    cursor_y = y;
-    draw_cursor();
+void tty_set_cursor_pos(long x, long y, long windowid) {
+    struct window_t *wptr = get_window_ptr(windowid);
+    clear_cursor(windowid);
+    wptr->cursor_x = x;
+    wptr->cursor_y = y;
+    draw_cursor(windowid);
     return;
 }
 
-void tty_putchar(char c) {
+void tty_putchar(char c, long windowid) {
+    struct window_t *wptr = get_window_ptr(windowid);
     switch (c) {
         case 0x00:
             break;
         case 0x0A:
-            if (cursor_y == (tty_rows - 1)) {
-                tty_set_cursor_pos(0, (tty_rows - 1));
-                scroll();
+            if (wptr->cursor_y == (25 - 1)) {
+                tty_set_cursor_pos(0, (25 - 1), windowid);
+                scroll(windowid);
             } else
-                tty_set_cursor_pos(0, (cursor_y + 1));
+                tty_set_cursor_pos(0, (wptr->cursor_y + 1), windowid);
             break;
         case 0x08:
-            if (cursor_x || cursor_y) {
-                clear_cursor();
-                if (cursor_x)
-                    cursor_x--;
+            if (wptr->cursor_x || wptr->cursor_y) {
+                clear_cursor(windowid);
+                if (wptr->cursor_x)
+                    wptr->cursor_x--;
                 else {
-                    cursor_y--;
-                    cursor_x = tty_cols - 1;
+                    wptr->cursor_y--;
+                    wptr->cursor_x = 80 - 1;
                 }
-                plot_char_grid(' ', cursor_x, cursor_y,
-                    (unsigned long)0, (unsigned long)0x888888);
-                draw_cursor();
+                plot_char_grid(' ', wptr->cursor_x, wptr->cursor_y,
+                    (unsigned long)0xffffff, (unsigned long)0, windowid);
+                draw_cursor(windowid);
             }
             break;
         default:
-            plot_char_grid(c, cursor_x++, cursor_y,
-                (unsigned long)0, (unsigned long)0x888888);
-            if (cursor_x == tty_cols) {
-                cursor_x = 0;
-                cursor_y++;
+            plot_char_grid(c, wptr->cursor_x++, wptr->cursor_y,
+                (unsigned long)0xffffff, (unsigned long)0, windowid);
+            if (wptr->cursor_x == 80) {
+                wptr->cursor_x = 0;
+                wptr->cursor_y++;
             }
-            if (cursor_y == tty_rows) {
-                cursor_y--;
-                scroll();
+            if (wptr->cursor_y == 80) {
+                wptr->cursor_y--;
+                scroll(windowid);
             }
-            draw_cursor();
+            draw_cursor(windowid);
     }
     return;
 }
 
-void tty_print(char *str) {
+void tty_print(char *str, long windowid) {
     long i;
 
     for (i = 0; str[i]; i++)
-        tty_putchar(str[i]);
+        tty_putchar(str[i], windowid);
+
+    return;
+}
+
+void kstrcpy(char *dest, char *src) {
+    long i;
+
+    for (i = 0; src[i]; i++)
+        dest[i] = src[i];
+
+    dest[i] = 0;
+
+    return;
+}
+
+long create_window(char *title, long x, long y) {
+    long i;
+    long windowid;
+    struct window_t *wptr;
+
+    /* check if no windows were allocated */
+    if (!windows) {
+        /* allocate root window */
+        windows = sbrk(sizeof(struct window_t));
+        wptr = windows;
+        windowid = 0;
+    } else {
+        /* else crawl the linked list to the last entry */
+        wptr = windows;
+        for (windowid = 1; ; windowid++) {
+            if (wptr->next) {
+                wptr = wptr->next;
+                continue;
+            } else {
+                wptr->next = sbrk(sizeof(struct window_t));
+                wptr = wptr->next;
+                break;
+            }
+        }
+    }
+
+    kstrcpy(wptr->title, title);
+    wptr->x = x;
+    wptr->y = y;
+    wptr->cursor_x = 0;
+    wptr->cursor_y = 0;
+
+    /* clear the window's grid */
+    for (i = 0; i < 80 * 25; i++)
+        wptr->grid[i] = ' ';
+
+    return windowid;
+}
+
+void tty_refresh(void) {
+    long i;
+    long j;
+
+    /* clear screen */
+    for (i = 0; i < width * height; i++)
+        framebuffer[i] = 0;
+
+    /* draw every window */
+    for (j = 0; ; j++) {
+        struct window_t *wptr = get_window_ptr(j);
+        if (!wptr)
+            return;
+
+        /* draw the title bar */
+        for (i = 0; i < 80 * 8 + 4; i++)
+            plot_px(wptr->x + i, wptr->y, (unsigned long)0xffffff);
+        for (i = 0; i < 18; i++)
+            plot_px(wptr->x, wptr->y + i, (unsigned long)0xffffff);
+        for (i = 0; i < 18; i++)
+            plot_px(wptr->x + (80 * 8 + 4), wptr->y + i, (unsigned long)0xffffff);
+
+        /* draw the title */
+        for (i = 0; wptr->title[i]; i++)
+            plot_char(wptr->title[i], wptr->x + 8 + i * 8, wptr->y + 1,
+                (unsigned long)0xffffff, (unsigned long)0, j);
+
+        /* draw the window border */
+        for (i = 0; i < 80 * 8 + 4; i++)
+            plot_px(wptr->x + i, wptr->y + 18, (unsigned long)0xffffff);
+        for (i = 0; i < 80 * 8 + 4; i++)
+            plot_px(wptr->x + i, wptr->y + (25 * 16 + 4) + 18, (unsigned long)0xffffff);
+        for (i = 0; i < 25 * 16 + 4; i++)
+            plot_px(wptr->x, wptr->y + i + 18, (unsigned long)0xffffff);
+        for (i = 0; i < 25 * 16 + 4; i++)
+            plot_px(wptr->x + (80 * 8 + 4), wptr->y + i + 18, (unsigned long)0xffffff);
+
+        /* interpret the grid and print the chars */
+        for (i = 0; i < (80 * 25); i++) {
+            plot_char_grid(wptr->grid[i], i % 80, i / 80,
+                (unsigned long)0xffffff, (unsigned long)0, j);
+        }
+        draw_cursor(j);
+    }
 
     return;
 }
@@ -152,19 +272,28 @@ void tty_print(char *str) {
 void init_graphics(void) {
     long i;
 
-    tty_cols = width / 8;
-    tty_rows = height / 16;
+    create_window("window 0", 5, 5);
+    create_window("window 1", 45, 45);
+    create_window("window 2", 75, 75);
+    tty_refresh();
 
-    tty_grid = sbrk(tty_rows * tty_cols);
+    tty_print("Next level meme!", 0);
+    tty_print("yes\nno\nyes\nno\nyes", 1);
+    tty_print("no", 2);
+
+    /*tty_cols = width / 8;
+    tty_rows = height / 16;*/
+
+    /*tty_grid = sbrk(tty_rows * tty_cols);*/
 
     /* zero out the thing here */
-    for (i = 0; i < tty_rows * tty_cols; i++)
+    /*for (i = 0; i < tty_rows * tty_cols; i++)
         tty_grid[i] = ' ';
 
     tty_refresh();
 
     /* print hello world */
-    tty_print("Welcome to the biggest meme of them all.");
+    /*tty_print("Welcome to the biggest meme of them all.");*/
 
     return;
 }
