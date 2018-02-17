@@ -21,10 +21,10 @@ truncate --size=-4096 me.img
 # compile the C files into assembly first
 ./cc/cc32 kernel/drivers/graphics.c
 
-nasm kernel/stub.asm -f bin -o me.bin
-./echfs-utils me.img import me.bin me.bin
-
 nasm userland/generic_program.asm -f bin -o generic_program.bin
 ./echfs-utils me.img import generic_program.bin generic_program.bin
+
+nasm kernel/stub.asm -f bin -o me.bin
+./echfs-utils me.img import me.bin me.bin
 
 exit 0
