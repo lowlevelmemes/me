@@ -12,6 +12,7 @@ extern long height;
 extern char vga_font[];
 
 unsigned long *fb = 0;
+long screen_needs_refresh = 0;
 
 struct window_t {
     char title[128];
@@ -137,10 +138,10 @@ void tty_putchar(char c, long windowid) {
             if (wptr->cursor_y == (25 - 1)) {
                 tty_set_cursor_pos(0, (25 - 1), windowid);
                 scroll(windowid);
-                //tty_refresh();
+                screen_needs_refresh = 1;
             } else
                 tty_set_cursor_pos(0, (wptr->cursor_y + 1), windowid);
-                //tty_refresh();
+                screen_needs_refresh = 1;
             break;
         case 0x08:
             if (wptr->cursor_x || wptr->cursor_y) {
@@ -155,7 +156,7 @@ void tty_putchar(char c, long windowid) {
                     (unsigned long)0xffffff, (unsigned long)0, windowid);
                 //draw_cursor(windowid);
             }
-            //tty_refresh();
+            screen_needs_refresh = 1;
             break;
         default:
             plot_char_grid(c, wptr->cursor_x++, wptr->cursor_y,
@@ -168,7 +169,7 @@ void tty_putchar(char c, long windowid) {
                 wptr->cursor_y--;
                 scroll(windowid);
             }
-            //tty_refresh();
+            screen_needs_refresh = 1;
             //draw_cursor(windowid);
     }
     return;
@@ -179,8 +180,6 @@ void tty_print(char *str, long windowid) {
 
     for (i = 0; str[i]; i++)
         tty_putchar(str[i], windowid);
-
-    tty_refresh();
 
     return;
 }
@@ -241,7 +240,7 @@ void tty_refresh(void) {
 
     /* clear screen */
     for (i = 0; i < width * height; i++)
-        fb[i] = 0;
+        fb[i] = 0x008888;
 
     /* draw every window */
     for (j = 0; ; j++) {
@@ -298,22 +297,24 @@ void init_graphics(void) {
 
     tty_print("Next level meme!", 0);
     tty_print("yes\nno\nyes\nno\nyes", 1);
-    tty_print("no", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
     tty_print("the quick brown fox jumps over the lazy dog", 3);
-
-    /*tty_cols = width / 8;
-    tty_rows = height / 16;*/
-
-    /*tty_grid = sbrk(tty_rows * tty_cols);*/
-
-    /* zero out the thing here */
-    /*for (i = 0; i < tty_rows * tty_cols; i++)
-        tty_grid[i] = ' ';
-
-    tty_refresh();
-
-    /* print hello world */
-    /*tty_print("Welcome to the biggest meme of them all.");*/
 
     return;
 }

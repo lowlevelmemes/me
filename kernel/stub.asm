@@ -16,15 +16,16 @@ call init_pic
 call init_ivt
 call init_pit
 
-; enable interrupts
-sti
-
 pushad
 call _init_graphics
 popad
 
-cli
-hlt
+; enable interrupts
+sti
+
+halt:
+    hlt
+    jmp halt
 
 ; enable scheduler
 mov byte [sched_status], 1

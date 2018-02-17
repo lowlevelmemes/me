@@ -25,6 +25,12 @@ int08_hook:
     push KERNEL_SEGMENT
     pop ds
 
+    ; check if we need to refresh the screen
+    cmp dword [.refresh_timeout], 0
+    je .refresh_screen
+    dec dword [.refresh_timeout]
+.refresh_done:
+
     ; check if scheduling is disabled
     cmp byte [sched_status], 0
     je .reentry
@@ -62,6 +68,21 @@ int08_hook:
 .restart:
     mov word [task_sel], 0
     jmp .switch
+
+.refresh_screen:
+    cmp dword [_screen_needs_refresh], 1
+    jne .refresh_done
+    mov dword [_screen_needs_refresh], 0
+    push es
+    mov ax, KERNEL_SEGMENT
+    mov es, ax
+    call _tty_refresh
+    mov dword [.refresh_timeout], PIT_FREQUENCY / SCREEN_REFRESH_FREQ
+    pop es
+    jmp .refresh_done
+
+.refresh_timeout:
+    dd PIT_FREQUENCY / SCREEN_REFRESH_FREQ
 
 ; binary name in DS:ESI
 ; returns PID in EAX
