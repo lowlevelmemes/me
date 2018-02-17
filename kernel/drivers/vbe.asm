@@ -113,7 +113,7 @@ vbe_init:
     mov di, _vga_font
     call dump_vga_font
 
-    push es ; Save the Extra Segment Register - I've read that some BIOses will destroy ES.
+    push es ; Save the Extra Segment Register - I've read that some BIOSes will destroy ES.
     mov ax, 0x4f00
     mov di, vbe_info
     int 0x10
@@ -132,11 +132,11 @@ vbe_init:
 
     ; Read EDID to determine a suitable mode. wiki.osdev.org/EDID
     push es
-    mov ax, 0x4f15
-    mov bl, 1
-    xor cx, cx
-    xor dx, dx
-    mov di, vbe_edid
+    mov eax, 0x4f15
+    mov ebx, 1
+    xor ecx, ecx
+    xor edx, edx
+    mov edi, vbe_edid
     int 0x10
     pop es
 
@@ -148,21 +148,23 @@ vbe_init:
     cmp byte [vbe_edid.timing_desc1], 0x00
     je .use_default    
 
-    ; Width. 
-    mov ax, word [vbe_edid.timing_desc1+2]
+    ; Width.
+    xor ax, ax
+    mov al, byte [vbe_edid.timing_desc1+2]
     mov word [vbe_width], ax
-    mov ax, word [vbe_edid.timing_desc1+4]
-    and ax, 0xf0
+    mov al, byte [vbe_edid.timing_desc1+4]
+    and al, 0xf0
     shl ax, 4
-    or word [vbe_width], ax
+    add word [vbe_width], ax
 
     ; Height.
-    mov ax, word [vbe_edid.timing_desc1+5]
+    xor ax, ax
+    mov al, byte [vbe_edid.timing_desc1+5]
     mov word [vbe_height], ax
-    mov ax, word [vbe_edid.timing_desc1+7]
-    and ax, 0xf0
+    mov al, byte [vbe_edid.timing_desc1+7]
+    and al, 0xf0
     shl ax, 4
-    or word [vbe_height], ax
+    add word [vbe_height], ax
 
     ; Check that the dimensions were calculated properly.
     cmp word [vbe_width], 0
