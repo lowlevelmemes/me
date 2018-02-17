@@ -150,10 +150,16 @@ void tty_print(char *str) {
 }
 
 void init_graphics(void) {
+    long i;
+
     tty_cols = width / 8;
     tty_rows = height / 16;
 
     tty_grid = sbrk(tty_rows * tty_cols);
+
+    /* zero out the thing here */
+    for (i = 0; i < tty_rows * tty_cols; i++)
+        tty_grid[i] = ' ';
 
     tty_refresh();
 
