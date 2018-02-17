@@ -6,6 +6,18 @@ imod:
     ret
 #endasm
 
+#define BACKGROUND_COLOUR       0x00008888
+#define WINDOW_BORDERS          0x00ffffff
+#define TITLE_BAR_BACKG         0x00003377
+#define TITLE_BAR_FOREG         0x00ffffff
+#define WINDOW_ROWS             25
+#define WINDOW_COLS             80
+#define TITLE_BAR_THICKNESS     18
+#define TEXT_BG                 0x00000000
+#define TEXT_FG                 0x00cccccc
+#define CURSOR_BG               0x00ffffff
+#define CURSOR_FG               0x00000000
+
 extern unsigned long *framebuffer;
 extern long width;
 extern long height;
@@ -87,22 +99,15 @@ void plot_char(char c, long x, long y, unsigned long hex_fg, unsigned long hex_b
 
 void plot_char_grid(char c, long x, long y, unsigned long hex_fg, unsigned long hex_bg, long windowid) {
     struct window_t *wptr = get_window_ptr(windowid);
-    plot_char(c, x * 8 + wptr->x + 2, y * 16 + wptr->y + 20, hex_fg, hex_bg);
-    wptr->grid[x + y * 80] = c;
-    return;
-}
-
-void clear_cursor(long windowid) {
-    struct window_t *wptr = get_window_ptr(windowid);
-    plot_char(wptr->grid[wptr->cursor_x + wptr->cursor_y * 80],
-        wptr->x + wptr->cursor_x * 8 + 2, wptr->y + wptr->cursor_y * 16 + 20, (unsigned long)0xffffff, (unsigned long)0);
+    plot_char(c, x * 8 + wptr->x, y * 16 + wptr->y + TITLE_BAR_THICKNESS, hex_fg, hex_bg);
+    wptr->grid[x + y * WINDOW_COLS] = c;
     return;
 }
 
 void draw_cursor(long windowid) {
     struct window_t *wptr = get_window_ptr(windowid);
-    plot_char(wptr->grid[wptr->cursor_x + wptr->cursor_y * 80],
-        wptr->x + wptr->cursor_x * 8 + 2, wptr->y + wptr->cursor_y * 16 + 20, (unsigned long)0, (unsigned long)0xffffff);
+    plot_char(wptr->grid[wptr->cursor_x + wptr->cursor_y * WINDOW_COLS],
+        wptr->x + wptr->cursor_x * 8, wptr->y + wptr->cursor_y * 16 + TITLE_BAR_THICKNESS, CURSOR_FG, CURSOR_BG);
     return;
 }
 
@@ -111,10 +116,10 @@ void scroll(long windowid) {
     long i;
 
     /* notify grid */
-    for (i = 80; i < 25 * 80; i++)
-        wptr->grid[i - 80] = wptr->grid[i];
+    for (i = WINDOW_COLS; i < WINDOW_ROWS * WINDOW_COLS; i++)
+        wptr->grid[i - WINDOW_COLS] = wptr->grid[i];
     /* clear the last line of the screen */
-    for (i = 25 * 80 - 80; i < 25 * 80; i++)
+    for (i = WINDOW_ROWS * WINDOW_COLS - WINDOW_COLS; i < WINDOW_ROWS * WINDOW_COLS; i++)
         wptr->grid[i] = ' ';
 
     return;
@@ -122,10 +127,8 @@ void scroll(long windowid) {
 
 void tty_set_cursor_pos(long x, long y, long windowid) {
     struct window_t *wptr = get_window_ptr(windowid);
-    //clear_cursor(windowid);
     wptr->cursor_x = x;
     wptr->cursor_y = y;
-    //draw_cursor(windowid);
     return;
 }
 
@@ -135,8 +138,8 @@ void tty_putchar(char c, long windowid) {
         case 0x00:
             break;
         case 0x0A:
-            if (wptr->cursor_y == (25 - 1)) {
-                tty_set_cursor_pos(0, (25 - 1), windowid);
+            if (wptr->cursor_y == (WINDOW_ROWS - 1)) {
+                tty_set_cursor_pos(0, (WINDOW_ROWS - 1), windowid);
                 scroll(windowid);
                 screen_needs_refresh = 1;
             } else
@@ -145,32 +148,29 @@ void tty_putchar(char c, long windowid) {
             break;
         case 0x08:
             if (wptr->cursor_x || wptr->cursor_y) {
-                clear_cursor(windowid);
                 if (wptr->cursor_x)
                     wptr->cursor_x--;
                 else {
                     wptr->cursor_y--;
-                    wptr->cursor_x = 80 - 1;
+                    wptr->cursor_x = WINDOW_COLS - 1;
                 }
                 plot_char_grid(' ', wptr->cursor_x, wptr->cursor_y,
-                    (unsigned long)0xffffff, (unsigned long)0, windowid);
-                //draw_cursor(windowid);
+                    TEXT_FG, TEXT_BG, windowid);
             }
             screen_needs_refresh = 1;
             break;
         default:
             plot_char_grid(c, wptr->cursor_x++, wptr->cursor_y,
-                (unsigned long)0xffffff, (unsigned long)0, windowid);
-            if (wptr->cursor_x == 80) {
+                TEXT_FG, TEXT_FG, windowid);
+            if (wptr->cursor_x == WINDOW_COLS) {
                 wptr->cursor_x = 0;
                 wptr->cursor_y++;
             }
-            if (wptr->cursor_y == 80) {
+            if (wptr->cursor_y == WINDOW_ROWS) {
                 wptr->cursor_y--;
                 scroll(windowid);
             }
             screen_needs_refresh = 1;
-            //draw_cursor(windowid);
     }
     return;
 }
@@ -228,7 +228,7 @@ long create_window(char *title, long x, long y) {
     wptr->cursor_y = 0;
 
     /* clear the window's grid */
-    for (i = 0; i < 80 * 25; i++)
+    for (i = 0; i < WINDOW_COLS * WINDOW_ROWS; i++)
         wptr->grid[i] = ' ';
 
     return windowid;
@@ -237,10 +237,11 @@ long create_window(char *title, long x, long y) {
 void tty_refresh(void) {
     long i;
     long j;
+    long x;
 
     /* clear screen */
     for (i = 0; i < width * height; i++)
-        fb[i] = 0x008888;
+        fb[i] = BACKGROUND_COLOUR;
 
     /* draw every window */
     for (j = 0; ; j++) {
@@ -251,34 +252,40 @@ void tty_refresh(void) {
         }
 
         /* draw the title bar */
-        for (i = 0; i < 80 * 8 + 4; i++)
-            plot_px(wptr->x + i, wptr->y, (unsigned long)0xffffff);
-        for (i = 0; i < 18; i++)
-            plot_px(wptr->x, wptr->y + i, (unsigned long)0xffffff);
-        for (i = 0; i < 18; i++)
-            plot_px(wptr->x + (80 * 8 + 4), wptr->y + i, (unsigned long)0xffffff);
+        for (x = 0; x < TITLE_BAR_THICKNESS; x++)
+            for (i = 0; i < WINDOW_COLS * 8; i++)
+                plot_px(wptr->x + i, wptr->y + x, TITLE_BAR_BACKG);
 
         /* draw the title */
         for (i = 0; wptr->title[i]; i++)
             plot_char(wptr->title[i], wptr->x + 8 + i * 8, wptr->y + 1,
-                (unsigned long)0xffffff, (unsigned long)0, j);
-
-        /* draw the window border */
-        for (i = 0; i < 80 * 8 + 4; i++)
-            plot_px(wptr->x + i, wptr->y + 18, (unsigned long)0xffffff);
-        for (i = 0; i < 80 * 8 + 4; i++)
-            plot_px(wptr->x + i, wptr->y + (25 * 16 + 4) + 18, (unsigned long)0xffffff);
-        for (i = 0; i < 25 * 16 + 4; i++)
-            plot_px(wptr->x, wptr->y + i + 18, (unsigned long)0xffffff);
-        for (i = 0; i < 25 * 16 + 4; i++)
-            plot_px(wptr->x + (80 * 8 + 4), wptr->y + i + 18, (unsigned long)0xffffff);
+                TITLE_BAR_FOREG, TITLE_BAR_BACKG, j);
 
         /* interpret the grid and print the chars */
-        for (i = 0; i < (80 * 25); i++) {
-            plot_char_grid(wptr->grid[i], i % 80, i / 80,
-                (unsigned long)0xffffff, (unsigned long)0, j);
+        for (i = 0; i < (WINDOW_COLS * WINDOW_ROWS); i++) {
+            plot_char_grid(wptr->grid[i], i % WINDOW_COLS, i / WINDOW_COLS,
+                TEXT_FG, TEXT_BG, j);
         }
+
         draw_cursor(j);
+
+        /* draw the window border */
+
+        for (i = 0; i < WINDOW_COLS * 8; i++)
+            plot_px(wptr->x + i, wptr->y, WINDOW_BORDERS);
+        for (i = 0; i < TITLE_BAR_THICKNESS; i++)
+            plot_px(wptr->x, wptr->y + i, WINDOW_BORDERS);
+        for (i = 0; i < TITLE_BAR_THICKNESS; i++)
+            plot_px(wptr->x + (WINDOW_COLS * 8 - 1), wptr->y + i, WINDOW_BORDERS);
+
+        for (i = 0; i < WINDOW_COLS * 8; i++)
+            plot_px(wptr->x + i, wptr->y + TITLE_BAR_THICKNESS, WINDOW_BORDERS);
+        for (i = 0; i < WINDOW_COLS * 8; i++)
+            plot_px(wptr->x + i, wptr->y + (WINDOW_ROWS * 16 - 1) + TITLE_BAR_THICKNESS, WINDOW_BORDERS);
+        for (i = 0; i < WINDOW_ROWS * 16; i++)
+            plot_px(wptr->x, wptr->y + i + TITLE_BAR_THICKNESS, WINDOW_BORDERS);
+        for (i = 0; i < WINDOW_ROWS * 16; i++)
+            plot_px(wptr->x + (WINDOW_COLS * 8 - 1), wptr->y + i + TITLE_BAR_THICKNESS, WINDOW_BORDERS);
     }
 
     return;
@@ -297,15 +304,6 @@ void init_graphics(void) {
 
     tty_print("Next level meme!", 0);
     tty_print("yes\nno\nyes\nno\nyes", 1);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog", 2);
     tty_print("the quick brown fox jumps over the lazy dog\n", 3);
     tty_print("the quick brown fox jumps over the lazy dog\n", 3);
     tty_print("the quick brown fox jumps over the lazy dog\n", 3);
@@ -315,6 +313,15 @@ void init_graphics(void) {
     tty_print("the quick brown fox jumps over the lazy dog\n", 3);
     tty_print("the quick brown fox jumps over the lazy dog\n", 3);
     tty_print("the quick brown fox jumps over the lazy dog", 3);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
+    tty_print("the quick brown fox jumps over the lazy dog", 2);
 
     return;
 }
