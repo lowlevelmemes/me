@@ -63,16 +63,19 @@ detect_mem:
 bits 32
 ; ** END OF 16 BIT FUNCTION **
 
+; void *sbrk(long diff);
+; Expand (or contract) the kernel heap by diff bytes (signed)
+; Returns (in EAX) a pointer to the old top of the heap (kernel segment)
 
-; Expand (or contract) the kernel heap by EDI bytes (signed)
-; Returns (in EAX) a pointer to the old top of the heap (PHYSICAL)
-
-sbrk:
+_sbrk:
+    pop edi
+    push edi
     push ebx
     push ds
     push KERNEL_SEGMENT
     pop ds
     mov eax, dword [ext_heap_top]
+    sub eax, KERNEL_SEGMENT * 0x10
     add dword [ext_heap_top], edi
     cmp dword [ext_heap_top], DEFAULT_HEAP_BASE
     jb .underflow

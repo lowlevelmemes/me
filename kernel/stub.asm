@@ -15,9 +15,8 @@ call vbe_init
 call init_ivt
 call init_pit
 
-; draw a line
 pushad
-call _test_graphics
+call _init_graphics
 popad
 
 cli
