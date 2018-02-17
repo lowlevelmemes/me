@@ -11,6 +11,8 @@ extern long width;
 extern long height;
 extern char vga_font[];
 
+unsigned long *fb = 0;
+
 struct window_t {
     char title[128];
     long x;
@@ -48,10 +50,17 @@ struct window_t *get_window_ptr(long windowid) {
 void *sbrk(long);
 void tty_refresh(void);
 
+void fb_swap(void) {
+    long i;
+    for (i = 0; i < height * width; i++)
+        framebuffer[i] = fb[i];
+    return;
+}
+
 void plot_px(long x, long y, unsigned long hex) {
     long fb_i = x + width * y;
 
-    framebuffer[fb_i] = hex;
+    fb[fb_i] = hex;
 
     return;
 }
@@ -107,16 +116,15 @@ void scroll(long windowid) {
     for (i = 25 * 80 - 80; i < 25 * 80; i++)
         wptr->grid[i] = ' ';
 
-    tty_refresh();
     return;
 }
 
 void tty_set_cursor_pos(long x, long y, long windowid) {
     struct window_t *wptr = get_window_ptr(windowid);
-    clear_cursor(windowid);
+    //clear_cursor(windowid);
     wptr->cursor_x = x;
     wptr->cursor_y = y;
-    draw_cursor(windowid);
+    //draw_cursor(windowid);
     return;
 }
 
@@ -129,8 +137,10 @@ void tty_putchar(char c, long windowid) {
             if (wptr->cursor_y == (25 - 1)) {
                 tty_set_cursor_pos(0, (25 - 1), windowid);
                 scroll(windowid);
+                //tty_refresh();
             } else
                 tty_set_cursor_pos(0, (wptr->cursor_y + 1), windowid);
+                //tty_refresh();
             break;
         case 0x08:
             if (wptr->cursor_x || wptr->cursor_y) {
@@ -143,8 +153,9 @@ void tty_putchar(char c, long windowid) {
                 }
                 plot_char_grid(' ', wptr->cursor_x, wptr->cursor_y,
                     (unsigned long)0xffffff, (unsigned long)0, windowid);
-                draw_cursor(windowid);
+                //draw_cursor(windowid);
             }
+            //tty_refresh();
             break;
         default:
             plot_char_grid(c, wptr->cursor_x++, wptr->cursor_y,
@@ -157,7 +168,8 @@ void tty_putchar(char c, long windowid) {
                 wptr->cursor_y--;
                 scroll(windowid);
             }
-            draw_cursor(windowid);
+            //tty_refresh();
+            //draw_cursor(windowid);
     }
     return;
 }
@@ -167,6 +179,8 @@ void tty_print(char *str, long windowid) {
 
     for (i = 0; str[i]; i++)
         tty_putchar(str[i], windowid);
+
+    tty_refresh();
 
     return;
 }
@@ -227,13 +241,15 @@ void tty_refresh(void) {
 
     /* clear screen */
     for (i = 0; i < width * height; i++)
-        framebuffer[i] = 0;
+        fb[i] = 0;
 
     /* draw every window */
     for (j = 0; ; j++) {
         struct window_t *wptr = get_window_ptr(j);
-        if (!wptr)
+        if (!wptr) {
+            fb_swap();
             return;
+        }
 
         /* draw the title bar */
         for (i = 0; i < 80 * 8 + 4; i++)
@@ -272,14 +288,18 @@ void tty_refresh(void) {
 void init_graphics(void) {
     long i;
 
+    fb = sbrk(width * height * sizeof(unsigned long));
+
     create_window("window 0", 5, 5);
     create_window("window 1", 45, 45);
-    create_window("window 2", 75, 75);
+    create_window("window 2", 85, 85);
+    create_window("window 3", 125, 125);
     tty_refresh();
 
     tty_print("Next level meme!", 0);
     tty_print("yes\nno\nyes\nno\nyes", 1);
     tty_print("no", 2);
+    tty_print("the quick brown fox jumps over the lazy dog", 3);
 
     /*tty_cols = width / 8;
     tty_rows = height / 16;*/

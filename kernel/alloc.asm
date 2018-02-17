@@ -68,22 +68,17 @@ bits 32
 ; Returns (in EAX) a pointer to the old top of the heap (kernel segment)
 
 _sbrk:
-    pop edi
-    push edi
     push ebx
-    push ds
-    push KERNEL_SEGMENT
-    pop ds
     mov eax, dword [ext_heap_top]
     sub eax, KERNEL_SEGMENT * 0x10
-    add dword [ext_heap_top], edi
+    mov ebx, dword [esp+8]
+    add dword [ext_heap_top], ebx
     cmp dword [ext_heap_top], DEFAULT_HEAP_BASE
     jb .underflow
     mov ebx, dword [memory_size]
     cmp dword [ext_heap_top], ebx
     jae .overflow
 .out:
-    pop ds
     pop ebx
     ret
 
@@ -92,8 +87,6 @@ _sbrk:
     jmp .out
 
 .overflow:
-    push KERNEL_SEGMENT
-    pop ds
     mov si, .errmsg
     ;call simple_print
 .halt:
