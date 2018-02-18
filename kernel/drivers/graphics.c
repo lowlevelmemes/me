@@ -65,8 +65,16 @@ void window_focus(long windowid) {
     long i;
     struct window_t *last_wptr;
     struct window_t *req_wptr = get_window_ptr(windowid);
-    struct window_t *prev_wptr = get_window_ptr(windowid - 1);
+    struct window_t *prev_wptr;
     struct window_t *next_wptr = get_window_ptr(windowid + 1);
+
+    if (!req_wptr)
+        return;
+
+    if (windowid)
+        prev_wptr = get_window_ptr(windowid - 1);
+    else
+        prev_wptr = 0;
 
     /* go to the last window in the list */
     for (i = 0; ; i++) {
@@ -75,9 +83,16 @@ void window_focus(long windowid) {
     }
 
     last_wptr = get_window_ptr(i - 1);
+    if (!last_wptr)
+        return;
+    if (last_wptr == req_wptr)
+        return;
 
     /* the prev should point to the next */
-    prev_wptr->next = next_wptr;
+    if (prev_wptr)
+        prev_wptr->next = next_wptr;
+    else
+        windows = next_wptr;
     /* the requested one should point to NULL */
     req_wptr->next = 0;
     /* the last should point to the requested one */
@@ -326,29 +341,15 @@ void init_graphics(void) {
     create_window("window 1", 45, 45);
     create_window("window 2", 85, 85);
     create_window("window 3", 125, 125);
-    window_focus(2);
+    window_focus(0);
+    window_focus(0);
     tty_refresh();
 
     tty_print("Next level meme!", 0);
     tty_print("yes\nno\nyes\nno\nyes", 1);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 3);
-    tty_print("the quick brown fox jumps over the lazy dog", 3);
+    for (i = 0; i < 120; i++)
+        tty_print("the quick brown fox jumps over the lazy dog\n", 3);
     tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog\n", 2);
-    tty_print("the quick brown fox jumps over the lazy dog", 2);
 
     return;
 }
