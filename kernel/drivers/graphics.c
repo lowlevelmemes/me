@@ -60,6 +60,32 @@ struct window_t *get_window_ptr(long windowid) {
     }
 }
 
+void window_focus(long windowid) {
+    /* moves the requested window to the foreground */
+    long i;
+    struct window_t *last_wptr;
+    struct window_t *req_wptr = get_window_ptr(windowid);
+    struct window_t *prev_wptr = get_window_ptr(windowid - 1);
+    struct window_t *next_wptr = get_window_ptr(windowid + 1);
+
+    /* go to the last window in the list */
+    for (i = 0; ; i++) {
+        if (!get_window_ptr(i))
+            break;
+    }
+
+    last_wptr = get_window_ptr(i - 1);
+
+    /* the prev should point to the next */
+    prev_wptr->next = next_wptr;
+    /* the requested one should point to NULL */
+    req_wptr->next = 0;
+    /* the last should point to the requested one */
+    last_wptr->next = req_wptr;
+
+    return;
+}
+
 void *sbrk(long);
 void tty_refresh(void);
 
@@ -300,6 +326,7 @@ void init_graphics(void) {
     create_window("window 1", 45, 45);
     create_window("window 2", 85, 85);
     create_window("window 3", 125, 125);
+    window_focus(2);
     tty_refresh();
 
     tty_print("Next level meme!", 0);
