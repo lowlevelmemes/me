@@ -1,4 +1,5 @@
 build() {
+        # fuck toor
 	if [ ! -f ./echfs-utils.c ]; then
     		wget https://raw.githubusercontent.com/echidnaOS/echidnaOS/master/echidnafs/echfs-utils.c
 	fi
