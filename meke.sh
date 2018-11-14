@@ -3,15 +3,8 @@
 set -e
 set -x
 
-if [ ! -f ./echfs-utils.c ]; then
-    wget https://raw.githubusercontent.com/echidnaOS/echidnaOS/master/echidnafs/echfs-utils.c
-fi
-if [ ! -f ./echfs-utils ]; then
-    gcc -O2 echfs-utils.c -o echfs-utils
-fi
-if [ ! -f ./cc/tointel ]; then
-    gcc -O2 ./cc/tointel.c -o ./cc/tointel
-fi
+gcc -O2 echfs-utils.c -o echfs-utils
+gcc -O2 ./cc/tointel.c -o ./cc/tointel
 
 nasm bootloader/bootloader.asm -f bin -o me.img
 dd bs=32768 count=256 if=/dev/zero >> me.img
