@@ -1,7 +1,7 @@
 bochsout.txt
+bx_enh_dbg.ini
 me.bin
 me.img
-echfs-utils
 generic_program.bin
 **/*.c.asm
 cc/tointel
