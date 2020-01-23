@@ -1,5 +1,30 @@
 org 0x0010      ; loaded at ffff:0010 (hma)
-bits 16
+
+bits 32
+
+_start:
+    lgdt [GDT + 0xffff0]
+    jmp 0x18:.mode16 + 0xffff0
+    bits 16
+  .mode16:
+    mov ax, 0x20
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    mov eax, cr0
+    and al, 0xfe
+    mov cr0, eax
+    jmp 0xffff:.rmode
+  .rmode:
+    mov ax, 0xffff
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    mov sp, 0xfff0
 
 ; Include defines
 %include "kernel/defines.asm"

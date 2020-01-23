@@ -2,8 +2,6 @@
 
 cli
 
-lgdt [GDT]
-
 mov eax, cr0
 or al, 1
 mov cr0, eax

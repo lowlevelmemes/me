@@ -1,7 +1,8 @@
 bochsout.txt
 bx_enh_dbg.ini
 me.bin
-me.img
+me.hdd
 generic_program.bin
 **/*.c.asm
 cc/tointel
+qloader2
