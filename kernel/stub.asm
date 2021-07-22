@@ -1,8 +1,34 @@
 org 0x0010      ; loaded at ffff:0010 (hma)
 
+anchor:
+    db 'STIVALE1 ANCHOR'
+    db 32
+    dq 0x100000
+    dq 0
+    dq 0
+    dq stivale_hdr + 0xffff0
+
+stivale_hdr:
+    dq stack.top + 0xffff0
+    dw 0
+    dw 0
+    dw 0
+    dw 0
+    dq _start + 0xffff0
+
+stack:
+    times 256 db 0
+  .top:
+
+IDT:
+    dw 0x3ff
+    dd 0
+
 bits 32
 
 _start:
+    lidt [IDT + 0xffff0]
+
     lgdt [GDT + 0xffff0]
     jmp 0x18:.mode16 + 0xffff0
     bits 16
@@ -24,7 +50,7 @@ _start:
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    mov sp, 0xfff0
+    mov esp, 0xfff0
 
 ; Include defines
 %include "kernel/defines.asm"
